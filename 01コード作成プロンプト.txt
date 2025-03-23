@@ -1,0 +1,55 @@
+以下をpythonで実装する方法を検討し、アウトラインを検討してください。
+そのアウトラインに基づき、動作可能なコードを実装してください。
+実装するコードについて、コード内の説明は日本語で詳細に行ってください。
+標準エラー出力は英語で行ってください。
+
+# ISBN情報取得スクリプト仕様書
+
+この仕様書は、ISBNリストを入力として、OpenBD APIから書籍情報を取得し、指定のアトリビュートをCSV形式で出力するスクリプトの実装依頼のためのものです。
+
+## 機能概要
+
+- **入力**  
+  - ISBNが記載されたCSVファイル（1列目にISBN、ヘッダーの有無は任意）。
+- **処理内容**  
+  1. スクリプト実行時にUUIDを生成し、その先頭8桁を共通識別子として保持する。  
+  2. 各ISBNについて、OpenBD API（`https://api.openbd.jp/v1/get`）に対してGETリクエストを送信し、書籍情報を取得する。  
+  3. APIレスポンスから以下のアトリビュートを抽出する:
+     - `title`: `data[0]["onix"]["DescriptiveDetail"]["TitleDetail"]["TitleElement"]["TitleText"]["content"]`
+     - `publisher`: `data[0]["onix"]["PublishingDetail"]["Imprint"]["ImprintName"]`
+     - `PriceAmount`: `data[0]["onix"]["ProductSupply"]["SupplyDetail"]["Price"][0]["PriceAmount"]`（`Price`はリストで、先頭要素を利用）
+  4. エラー発生時は適宜エラーログを出力し、該当ISBNの出力には空文字列またはエラー情報を設定する。
+- **出力**  
+  - 出力はCSV形式で標準出力に出力する。  
+  - CSVには以下のヘッダーを含む（改行コードはLFに固定）:
+    - `isbn`, `title`, `publisher`, `PriceAmount`
+
+## ログ仕様
+
+- **標準エラー出力**  
+  - ログレベルはINFO以上を出力する。  
+  - ログメッセージは英語で記述する。  
+  - ログのフォーマットは以下の形式で出力する:  
+    ```
+    YYYY-MM-DD HH:MM:SS,mmm - LEVEL - <COMMON_UUID> - <メッセージ>
+    ```
+    例:  
+    ```
+    2025-03-23 10:58:13,134 - INFO - 4fed2ced - ISBN 9784621305997: Processing started
+    ```
+- **UUID**  
+  - スクリプト実行時に生成したUUIDの先頭8桁を各ログメッセージの先頭に付与する。
+  - ログフィルター等を用いて、全てのログメッセージにこの共通UUIDが含まれるようにする。
+
+## その他の要件
+
+- **エラーハンドリング**  
+  - APIリクエストエラー、JSONパースエラー、データ未取得（null）などの場合は、エラーメッセージをログ出力し、処理を継続する（該当ISBNはスキップまたは空情報で出力）。
+- **コード内コメント**  
+  - コード内のコメントは日本語のままとする。
+
+## 実行例
+
+```bash
+python isbn_list_csv.py input.csv > output.csv
+

@@ -1,0 +1,1 @@
+https://api.openbd.jp/v1/get?isbn=9784532351946
